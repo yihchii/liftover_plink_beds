@@ -188,7 +188,7 @@ task merge_and_split_by_chr {
     set -x -e -o pipefail
     mkdir -p autosomal_dir/
 
-    cat "~{write_lines(plink_beds)}" | sed -e 's/.bed//g' > files_to_merge.txt
+    cat "~{write_lines(plink_beds)}" | sed -e 's/\.bed//g' > files_to_merge.txt
     cat files_to_merge.txt
     ## Get memory on the machine, use 80% of the memory for each operation
     memTotal=$(head -n1 /proc/meminfo|awk '{print $2}')
