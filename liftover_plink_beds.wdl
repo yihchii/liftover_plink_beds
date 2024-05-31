@@ -25,13 +25,13 @@ workflow liftover_plink_beds {
     Boolean output_autosomal = true
   }
   String reference = basename(basename(basename(reference_fastagz, ".gz"), ".fa"), ".fasta")
-  scatter(plink_bed in plink_beds){
-    String file_prefix = basename(plink_bed, ".bed")
+  scatter(idx in range(length(plink_beds))){
+    String file_prefix = basename(plink_beds[idx], ".bed")
     call picard_liftovervcf {
-      input: 
-        plink_bed = plink_bed,
-        plink_bims = plink_bims,
-        plink_fams = plink_fams,
+      input:
+        plink_bed = plink_beds[idx],
+        plink_bim = plink_bims[idx],
+        plink_fam = plink_fams[idx],
         ucsc_chain = ucsc_chain,
         file_prefix = file_prefix,
         reference_fastagz = reference_fastagz,
@@ -76,9 +76,9 @@ workflow liftover_plink_beds {
 
 task picard_liftovervcf {
   input {
-    File plink_bed 
-    Array[File]+ plink_bims
-    Array[File]+ plink_fams
+    File plink_bed
+    File plink_bim
+    File plink_fam
     File ucsc_chain
     File reference_fastagz
     String split_par_build_code
@@ -100,7 +100,8 @@ task picard_liftovervcf {
     # thus we used `--merge-x` + `--sort-vars` + `--make-bpgen`, then `--export vcf`.
     plink_bed_path="~{plink_bed}"
     plink_prefix="${plink_bed_path%.bed}"
-    plink2 --bfile "${plink_prefix}" --make-bpgen --out "~{file_prefix}" \
+    plink2 --bed "~{plink_bed}" --bim "~{plink_bim}" --fam "~{plink_fam}" \
+        --make-bpgen --out "~{file_prefix}" \
         --merge-x \
         --sort-vars n \
         --threads $(nproc) --memory "${memXmx_m}"
@@ -133,7 +134,7 @@ task picard_liftovervcf {
     # `--indiv-sort` is used to enusre PLINK FAM output order remains as the original FAM, as LiftOverVcf changed sample order
     # `--allow-extra-chr` is used to permit unplaced contigs
     plink2 --vcf "~{file_prefix}_~{reference}.vcf.gz" --make-bed --out "~{file_prefix}_temp" \
-        --id-delim "_" --indiv-sort f "${plink_prefix}.fam" \
+        --id-delim "_" --indiv-sort f "~{plink_fam}" \
         --ref-allele force "~{file_prefix}_~{reference}.vcf.gz" 4 3 '#' \
         --alt1-allele force "~{file_prefix}_~{reference}.vcf.gz" 5 3 '#' \
         --allow-extra-chr --threads $(nproc) --memory "${memXmx_m}"
@@ -142,17 +143,17 @@ task picard_liftovervcf {
     # If set to split _par, represent the X chromosome's pseudo-autosomal region (PARs) as PAR1/PAR2
     if [ "~split_par_build_code" == "none" ]; then
         plink2 --bfile "~{file_prefix}_temp" --make-bed --out "~{file_prefix}_~{reference}" \
-            --fam "${plink_prefix}.fam" --allow-extra-chr --threads $(nproc) --memory "${memXmx_m}"
+            --fam "~{plink_fam}" --allow-extra-chr --threads $(nproc) --memory "${memXmx_m}"
     else
         plink2 --bfile "~{file_prefix}_temp" --make-bed --out "~{file_prefix}_~{reference}" \
             --split-par "~{split_par_build_code}" \
-            --fam "${plink_prefix}.fam" --allow-extra-chr --threads $(nproc) --memory "${memXmx_m}"
+            --fam "~{plink_fam}" --allow-extra-chr --threads $(nproc) --memory "${memXmx_m}"
     fi
     rm -rf "~{file_prefix}_temp.*"
 
     ## update FAM file with the phenotype column (batch info for UKB Array)
     awk 'BEGIN{OFS="\t";FS = "[ \t\n]+"}FNR==NR{a[$2]=$6;next}{if ($2 in a) print $1,$2,$3,$4,$5,a[$2]}' \
-        "${plink_prefix}.fam" "~{file_prefix}_~{reference}.fam" > "~{file_prefix}_~{reference}_temp.fam"
+        "~{plink_fam}" "~{file_prefix}_~{reference}.fam" > "~{file_prefix}_~{reference}_temp.fam"
     mv "~{file_prefix}_~{reference}_temp.fam" "~{file_prefix}_~{reference}.fam"
 
     bcftools sort -o "~{file_prefix}_~{reference}_rejected.vcf.gz" -O z \

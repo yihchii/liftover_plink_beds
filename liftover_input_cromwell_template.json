@@ -1,0 +1,21 @@
+{
+    "liftover_plink_beds.plink_beds": [
+        "",
+        "",
+        ""
+    ],
+    "liftover_plink_beds.plink_bims": [
+        "",
+        "",
+        ""
+    ],
+    "liftover_plink_beds.plink_fams": [
+        "",
+        "",
+        ""
+    ],
+    "liftover_plink_beds.ucsc_chain": "/path/to/b37ToHg38.over.chain",
+    "liftover_plink_beds.reference_fastagz": "/path/to/GRCh38_full_analysis_set_plus_decoy_hla.fa",
+    "liftover_plink_beds.split_par_build_code": "hg38",
+    "liftover_plink_beds.output_autosomal": true
+}
