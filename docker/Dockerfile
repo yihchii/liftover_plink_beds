@@ -3,7 +3,7 @@ ARG BCFTOOLS_VER="1.20"
 ARG PICARD_VER="3.1.1"
 ARG INSTALL_DIR="/usr/local"
 ARG PLINK1_VER="20231211"
-ARG PLINK2_VER="20240526"
+ARG PLINK2_VER="20240609"
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     build-essential \
